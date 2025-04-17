@@ -1,0 +1,1 @@
+### Redis function developed in golang (fun!)
