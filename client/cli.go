@@ -51,11 +51,7 @@ func main() {
 				return
 			}
 			fmt.Print(response)
-			if strings.HasPrefix(response, "+") ||
-				strings.HasPrefix(response, "-") ||
-				strings.HasPrefix(response, ":") ||
-				strings.HasPrefix(response, "$") ||
-				strings.HasPrefix(response, "*") {
+			if strings.HasPrefix(response, "$") {
 				break
 			}
 		}
