@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 
 	"github.com/smafjal/goredis-mini/db"
@@ -41,33 +42,83 @@ func handleConnection(conn net.Conn) {
 
 		switch strings.ToUpper(cmd[0]) {
 		case "PING":
-			conn.Write([]byte("+PONG\r\n"))
+			response := executePING()
+			conn.Write([]byte(response))
 		case "SET":
-			if len(cmd) != 3 {
-				conn.Write([]byte("-wrong number of arguments for `set`\r\n"))
-			}
-			store.Set(cmd[1], cmd[2])
-			conn.Write([]byte("+OK\r\n"))
+			response := executeSET(cmd)
+			conn.Write([]byte(response))
+		case "SETEX":
+			response := executeSETEX(cmd)
+			conn.Write([]byte(response))
+		case "EXPIRE":
+			response := executeEXPIRE(cmd)
+			conn.Write([]byte(response))
 		case "GET":
-			if len(cmd) != 2 {
-				conn.Write([]byte("-wrong number of arguments for `get`\r\n"))
-			} else {
-				if value, ok := store.Get(cmd[1]); ok {
-					msg := fmt.Sprintf("$ %s\r\n", value)
-					conn.Write([]byte(msg))
-				} else {
-					conn.Write([]byte("$ -1\r\n"))
-				}
-			}
+			response := executeGET(cmd)
+			conn.Write([]byte(response))
 		case "DEL":
-			if len(cmd) != 2 {
-				conn.Write([]byte("-wrong number of arguments for `del`\r\n"))
-			} else {
-				ok := store.Del(cmd[1])
-				conn.Write([]byte(fmt.Sprintf(": %d\r\n", ok)))
-			}
+			response := executeDEL(cmd)
+			conn.Write([]byte(response))
 		default:
 			conn.Write([]byte("-unknown command\r\n"))
 		}
 	}
+}
+
+func executePING() string {
+	return "+PONG\r\n"
+}
+
+func executeSET(cmd []string) string {
+	if len(cmd) != 3 {
+		return "-wrong number of arguments for `set`\r\n"
+	}
+	store.Set(cmd[1], cmd[2])
+	return "+OK\r\n"
+}
+
+func executeSETEX(cmd []string) string {
+	if len(cmd) != 4 {
+		return "-wrong number of arguments for `setex`\r\n"
+	}
+	ttl, err := strconv.Atoi(cmd[2])
+	if err != nil {
+		return "invalid ttl\r\n"
+	}
+	store.SetWithTTL(cmd[1], cmd[3], ttl)
+	return "+OK\r\n"
+}
+
+func executeGET(cmd []string) string {
+	if len(cmd) != 2 {
+		return "-wrong number of arguments for `get`\r\n"
+	}
+	if value, ok := store.Get(cmd[1]); ok {
+		return fmt.Sprintf("$ %s\r\n", value)
+	}
+	return "$ -1\r\n"
+}
+
+func executeDEL(cmd []string) string {
+	if len(cmd) != 2 {
+		return "-wrong number of arguments for `del`\r\n"
+	}
+	ok := store.Del(cmd[1])
+	return fmt.Sprintf(": %d\r\n", ok)
+}
+
+func executeEXPIRE(cmd []string) string {
+	if len(cmd) != 3 {
+		return "-wrong number of arguments for `expire`\r\n"
+	}
+	ttl, err := strconv.Atoi(cmd[2])
+	if err != nil {
+		return "invalid ttl\r\n"
+	}
+
+	if value, ok := store.Get(cmd[1]); ok {
+		store.SetWithTTL(cmd[1], value, ttl)
+		return ": 1\r\n"
+	}
+	return ": 0\r\n"
 }
