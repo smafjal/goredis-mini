@@ -67,6 +67,15 @@ func handleConnection(conn net.Conn, eng *core.Engine) {
 		case "DEL":
 			response := eng.ExecuteDEL(cmd)
 			conn.Write([]byte(response))
+		case "SUBSCRIBE":
+			response := eng.ExecuteSUBSCRIBE(cmd, conn)
+			conn.Write([]byte(response))
+		case "PUBLISH":
+			response := eng.ExecutePUBLISH(cmd)
+			conn.Write([]byte(response))
+		case "UNSUBSCRIBE":
+			response := eng.ExecuteUNSUBSCRIBE(cmd, conn)
+			conn.Write([]byte(response))
 		default:
 			conn.Write([]byte("$ unknown command\r\n"))
 		}

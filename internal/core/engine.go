@@ -2,18 +2,24 @@ package core
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 
+	"github.com/smafjal/goredis-mini/internal/pubsub"
 	"github.com/smafjal/goredis-mini/internal/store"
 )
 
 type Engine struct {
 	db *store.Database
+	ps *pubsub.Pubsub
 }
 
-func NewEngine(db *store.Database) *Engine {
-	return &Engine{db: db}
+func NewEngine(db *store.Database, ps *pubsub.Pubsub) *Engine {
+	return &Engine{
+		db: db,
+		ps: ps,
+	}
 }
 
 func (e *Engine) ProcessAofCmd(line string, db *store.Database) {
@@ -102,4 +108,28 @@ func (e *Engine) ExecuteEXPIRE(cmd []string) string {
 		return "$ 1\r\n"
 	}
 	return "$ 0\r\n"
+}
+
+func (e *Engine) ExecuteSUBSCRIBE(cmd []string, conn net.Conn) string {
+	if len(cmd) < 2 {
+		return "$ wrong number of arguments for `subscribe`\r\n"
+	}
+	e.ps.Subscribe(cmd[1:], conn)
+	return "$ OK\r\n"
+}
+
+func (e *Engine) ExecutePUBLISH(cmd []string) string {
+	if len(cmd) < 3 {
+		return "$ wrong number of arguments for `publish`\r\n"
+	}
+	count := e.ps.Publish(cmd[1], strings.Join(cmd[2:], " "))
+	return fmt.Sprintf("$ %d\r\n", count)
+}
+
+func (e *Engine) ExecuteUNSUBSCRIBE(cmd []string, conn net.Conn) string {
+	if len(cmd) < 2 {
+		return "$ wrong number of arguments for `unsubscribe`\r\n"
+	}
+	e.ps.Unsubscribe(cmd[1:], conn)
+	return "$ OK\r\n"
 }

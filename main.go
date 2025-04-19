@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/smafjal/goredis-mini/internal/core"
+	"github.com/smafjal/goredis-mini/internal/pubsub"
 	"github.com/smafjal/goredis-mini/internal/server"
 	"github.com/smafjal/goredis-mini/internal/store"
 )
@@ -15,7 +16,8 @@ func main() {
 
 	aoflogger := store.NewAof("aof/appendonly.aof")
 	db := store.NewDatabase(aoflogger)
-	eng := core.NewEngine(db)
+	ps := pubsub.NewPubsub()
+	eng := core.NewEngine(db, ps)
 
 	lines, err := aoflogger.Load()
 	if err == nil {
